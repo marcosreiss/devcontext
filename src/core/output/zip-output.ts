@@ -1,11 +1,8 @@
 // src/core/output/zip-output.ts
 import fs from "node:fs";
+import archiver from "archiver";
 
 export async function zipOutput(sourceDir: string, outPath: string) {
-  const archiverModule = await import("archiver");
-
-  const archiver = archiverModule.default || archiverModule;
-
   return new Promise<void>((resolve, reject) => {
     const output = fs.createWriteStream(outPath);
 

@@ -31,8 +31,12 @@ export async function generateFolderMarkdowns(
       );
     }
 
-    const safeName = folder.replaceAll("/", "_") || "root";
+    const safeName =
+      folder.replaceAll("\\", "_").replaceAll("/", "_").replaceAll(":", "") ||
+      "root";
 
-    await fs.writeFile(path.join(outputDir, `${safeName}.md`), markdown);
+    const outputFile = path.join(outputDir, `${safeName}.md`);
+
+    await fs.writeFile(outputFile, markdown);
   }
 }

@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "adm-zip": "^0.5.17",
-    "archiver": "^8.0.0",
+    "archiver": "7.0.1",
     "fast-glob": "^3.3.3",
     "ignore": "^7.0.5",
     "lucide-react": "^1.16.0",
