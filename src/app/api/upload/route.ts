@@ -6,6 +6,16 @@ import { createTempDir } from "@/core/scanner/create-temp-dir";
 import { extractZip } from "@/core/scanner/extract-zip";
 import { getProjectFiles } from "@/core/scanner/get-project-files";
 
+import { generateTree } from "@/core/tree/generate-tree";
+
+import { createOutputDir } from "@/core/output/create-output-dir";
+
+import { writeStructureMarkdown } from "@/core/markdown/write-structure-markdown";
+
+import { generateFolderMarkdowns } from "@/core/markdown/generate-folder-markdowns";
+
+import { zipOutput } from "@/core/output/zip-output";
+
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
@@ -32,10 +42,25 @@ export async function POST(req: Request) {
 
     const files = await getProjectFiles(extractedPath);
 
-    return Response.json({
-      success: true,
-      totalFiles: files.length,
-      files,
+    const tree = generateTree(files.map((f) => f.relativePath));
+
+    const outputDir = await createOutputDir(tempDir);
+
+    await writeStructureMarkdown(outputDir, tree);
+
+    await generateFolderMarkdowns(files, outputDir);
+
+    const finalZip = path.join(tempDir, "devcontext-output.zip");
+
+    await zipOutput(outputDir, finalZip);
+
+    const zipBuffer = await fs.readFile(finalZip);
+
+    return new Response(zipBuffer, {
+      headers: {
+        "Content-Type": "application/zip",
+        "Content-Disposition": 'attachment; filename="devcontext-output.zip"',
+      },
     });
   } catch (error) {
     console.error(error);

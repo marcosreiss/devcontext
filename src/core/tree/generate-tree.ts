@@ -1,5 +1,14 @@
 // src/core/tree/generate-tree.ts
-// melhorar depois para gerar uma árvore de diretórios, não apenas uma lista ordenada de caminhos
 export function generateTree(paths: string[]) {
-  return paths.sort().join("\n");
+  const tree: string[] = [];
+
+  for (const filePath of paths.sort()) {
+    const depth = filePath.split("/").length - 1;
+
+    const indent = "  ".repeat(depth);
+
+    tree.push(`${indent}├── ${filePath.split("/").pop()}`);
+  }
+
+  return tree.join("\n");
 }

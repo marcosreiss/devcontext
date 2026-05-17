@@ -20,18 +20,26 @@ export default function HomePage() {
 
     formData.append("file", file);
 
-    try {
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
 
-      const data = await response.json();
+    const blob = await response.blob();
 
-      console.log(data);
-    } finally {
-      setLoading(false);
-    }
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+
+    a.href = url;
+
+    a.download = "devcontext-output.zip";
+
+    a.click();
+
+    window.URL.revokeObjectURL(url);
+
+    setLoading(false);
   }
 
   return (
