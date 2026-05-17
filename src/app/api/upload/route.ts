@@ -2,21 +2,27 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import { createTempDir } from "@/core/scanner/create-temp-dir";
-import { extractZip } from "@/core/scanner/extract-zip";
-import { getProjectFiles } from "@/core/scanner/get-project-files";
-
-import { generateTree } from "@/core/tree/generate-tree";
-
-import { createOutputDir } from "@/core/output/create-output-dir";
+import { removeTempDir } from "@/core/cleanup/remove-temp-dir";
 
 import { writeStructureMarkdown } from "@/core/markdown/write-structure-markdown";
 
 import { generateFolderMarkdowns } from "@/core/markdown/generate-folder-markdowns";
 
+import { createOutputDir } from "@/core/output/create-output-dir";
+
 import { zipOutput } from "@/core/output/zip-output";
 
+import { createTempDir } from "@/core/scanner/create-temp-dir";
+
+import { extractZip } from "@/core/scanner/extract-zip";
+
+import { getProjectFiles } from "@/core/scanner/get-project-files";
+
+import { generateTree } from "@/core/tree/generate-tree";
+
 export async function POST(req: Request) {
+  let tempDir = "";
+
   try {
     const formData = await req.formData();
 
@@ -26,7 +32,7 @@ export async function POST(req: Request) {
       return Response.json({ error: "Arquivo inválido" }, { status: 400 });
     }
 
-    const tempDir = await createTempDir();
+    tempDir = await createTempDir();
 
     const zipPath = path.join(tempDir, file.name);
 
@@ -50,7 +56,9 @@ export async function POST(req: Request) {
 
     await generateFolderMarkdowns(files, outputDir);
 
-    const finalZip = path.join(tempDir, "devcontext-output.zip");
+    const projectName = file.name.replace(".zip", "");
+
+    const finalZip = path.join(tempDir, `${projectName}-context.zip`);
 
     await zipOutput(outputDir, finalZip);
 
@@ -59,12 +67,17 @@ export async function POST(req: Request) {
     return new Response(zipBuffer, {
       headers: {
         "Content-Type": "application/zip",
-        "Content-Disposition": 'attachment; filename="devcontext-output.zip"',
+
+        "Content-Disposition": `attachment; filename="${projectName}-context.zip"`,
       },
     });
   } catch (error) {
     console.error(error);
 
     return Response.json({ error: "Erro interno" }, { status: 500 });
+  } finally {
+    if (tempDir) {
+      await removeTempDir(tempDir);
+    }
   }
 }

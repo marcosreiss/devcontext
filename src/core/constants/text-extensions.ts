@@ -1,0 +1,23 @@
+// src/core/constants/text-extensions.ts
+export const TEXT_FILE_EXTENSIONS = [
+  ".ts",
+  ".tsx",
+  ".js",
+  ".jsx",
+  ".json",
+  ".md",
+  ".css",
+  ".scss",
+  ".html",
+  ".yml",
+  ".yaml",
+  ".env",
+  ".java",
+  ".kt",
+  ".xml",
+  ".sql",
+  ".properties",
+  ".txt",
+  ".sh",
+  ".bat",
+];

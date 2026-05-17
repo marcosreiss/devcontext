@@ -1,45 +1,88 @@
 // src/app/page.tsx
 "use client";
 
-import { Loader2, UploadCloud } from "lucide-react";
-import { useState } from "react";
+import {
+  Loader2,
+  UploadCloud,
+} from "lucide-react";
+
+import { useRef, useState } from "react";
 
 export default function HomePage() {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] =
+    useState(false);
 
-  async function handleUpload(
+  const [dragging, setDragging] =
+    useState(false);
+
+  const inputRef =
+    useRef<HTMLInputElement>(null);
+
+  async function processFile(file: File) {
+    setLoading(true);
+
+    try {
+      const formData = new FormData();
+
+      formData.append("file", file);
+
+      const response = await fetch(
+        "/api/upload",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      const blob =
+        await response.blob();
+
+      const url =
+        window.URL.createObjectURL(blob);
+
+      const a =
+        document.createElement("a");
+
+      a.href = url;
+
+      a.download =
+        file.name.replace(
+          ".zip",
+          ""
+        ) + "-context.zip";
+
+      a.click();
+
+      window.URL.revokeObjectURL(url);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleChange(
     event: React.ChangeEvent<HTMLInputElement>
   ) {
-    const file = event.target.files?.[0];
+    const file =
+      event.target.files?.[0];
 
     if (!file) return;
 
-    setLoading(true);
+    await processFile(file);
+  }
 
-    const formData = new FormData();
+  async function handleDrop(
+    event: React.DragEvent<HTMLDivElement>
+  ) {
+    event.preventDefault();
 
-    formData.append("file", file);
+    setDragging(false);
 
-    const response = await fetch("/api/upload", {
-      method: "POST",
-      body: formData,
-    });
+    const file =
+      event.dataTransfer.files?.[0];
 
-    const blob = await response.blob();
+    if (!file) return;
 
-    const url = window.URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-
-    a.href = url;
-
-    a.download = "devcontext-output.zip";
-
-    a.click();
-
-    window.URL.revokeObjectURL(url);
-
-    setLoading(false);
+    await processFile(file);
   }
 
   return (
@@ -53,41 +96,58 @@ export default function HomePage() {
           </div>
 
           <h1 className="text-2xl font-semibold">
-            Upload do Projeto
+            DevContext
           </h1>
 
           <p className="mt-2 text-sm text-zinc-400">
-            Envie um arquivo .zip para iniciar o processamento.
+            Gere documentação de
+            contexto automaticamente.
           </p>
         </div>
 
-        <label
-          htmlFor="file-upload"
-          className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-700 bg-zinc-800/40 px-6 py-10 transition hover:border-zinc-500 hover:bg-zinc-800"
+        {/** biome-ignore lint/a11y/noStaticElementInteractions: melhorar explicação */}
+        {/** biome-ignore lint/a11y/useKeyWithClickEvents:melhorar explicação */}
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+
+            setDragging(true);
+          }}
+          onDragLeave={() =>
+            setDragging(false)
+          }
+          onDrop={handleDrop}
+          onClick={() =>
+            inputRef.current?.click()
+          }
+          className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-10 transition ${dragging
+            ? "border-zinc-300 bg-zinc-800"
+            : "border-zinc-700 bg-zinc-800/40 hover:border-zinc-500"
+            }`}
         >
           <input
-            id="file-upload"
+            ref={inputRef}
             type="file"
             accept=".zip"
             className="hidden"
-            onChange={handleUpload}
+            onChange={handleChange}
           />
 
           <UploadCloud className="mb-4 size-10 text-zinc-400" />
 
           <span className="text-sm font-medium">
-            Clique para selecionar o arquivo
+            Arraste um .zip ou clique
           </span>
 
           <span className="mt-1 text-xs text-zinc-500">
             Apenas arquivos .zip
           </span>
-        </label>
+        </div>
 
         {loading && (
           <div className="mt-6 flex items-center justify-center gap-2 text-sm text-zinc-300">
             <Loader2 className="size-4 animate-spin" />
-            Processando arquivo...
+            Gerando documentação...
           </div>
         )}
       </div>

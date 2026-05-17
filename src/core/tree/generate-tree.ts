@@ -1,14 +1,18 @@
 // src/core/tree/generate-tree.ts
 export function generateTree(paths: string[]) {
-  const tree: string[] = [];
+  const lines: string[] = [];
 
-  for (const filePath of paths.sort()) {
-    const depth = filePath.split("/").length - 1;
+  const sorted = [...paths].sort();
 
-    const indent = "  ".repeat(depth);
+  for (const path of sorted) {
+    const parts = path.split("/");
 
-    tree.push(`${indent}├── ${filePath.split("/").pop()}`);
+    const depth = parts.length - 1;
+
+    const indent = "│   ".repeat(depth);
+
+    lines.push(`${indent}├── ${parts.at(-1)}`);
   }
 
-  return tree.join("\n");
+  return lines.join("\n");
 }
