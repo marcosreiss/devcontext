@@ -2,13 +2,19 @@
 "use client";
 
 import {
-  Download,
-  FileText,
   Loader2,
   UploadCloud,
 } from "lucide-react";
 
 import { useRef, useState } from "react";
+
+import { MarkdownViewer } from "@/components/markdown-viewer";
+
+import { ProjectSidebar } from "@/components/project-sidebar";
+
+import { StatsCard } from "@/components/stats-card";
+
+import type { ProjectStack } from "@/core/stacks/stack-config";
 
 interface GeneratedFile {
   id: string;
@@ -20,6 +26,7 @@ interface UploadResponse {
   projectName: string;
   downloadUrl: string;
   files: GeneratedFile[];
+  totalFiles: number;
 }
 
 export default function HomePage() {
@@ -29,13 +36,16 @@ export default function HomePage() {
   const [dragging, setDragging] =
     useState(false);
 
+  const [stack] =
+    useState<ProjectStack>("next");
+
   const [data, setData] =
     useState<UploadResponse | null>(
       null
     );
 
   const [selectedFile, setSelectedFile] =
-    useState<string | null>(null);
+    useState("");
 
   const inputRef =
     useRef<HTMLInputElement>(null);
@@ -47,6 +57,8 @@ export default function HomePage() {
       const formData = new FormData();
 
       formData.append("file", file);
+
+      formData.append("stack", stack);
 
       const response = await fetch(
         "/api/upload",
@@ -62,15 +74,9 @@ export default function HomePage() {
       setData(result);
 
       if (result.files.length > 0) {
-        const firstFile =
-          await fetch(
-            result.files[0].downloadUrl
-          );
-
-        const content =
-          await firstFile.text();
-
-        setSelectedFile(content);
+        await handleFileClick(
+          result.files[0].downloadUrl
+        );
       }
     } finally {
       setLoading(false);
@@ -91,7 +97,7 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
       <div className="mx-auto flex max-w-7xl gap-6 p-6">
-        <div className="w-[320px] shrink-0 rounded-3xl border border-zinc-800 bg-zinc-900/70 p-6">
+        <div className="w-85 shrink-0 rounded-3xl border border-zinc-800 bg-zinc-900/70 p-6">
           <div className="mb-6">
             <h1 className="text-2xl font-semibold">
               DevContext
@@ -160,49 +166,48 @@ export default function HomePage() {
           {loading && (
             <div className="mt-6 flex items-center gap-2 text-sm">
               <Loader2 className="size-4 animate-spin" />
-              Processando...
+              Gerando contexto...
             </div>
           )}
 
           {data && (
             <>
-              <a
-                href={data.downloadUrl}
-                className="mt-6 flex items-center justify-center gap-2 rounded-xl bg-zinc-100 px-4 py-3 text-sm font-medium text-zinc-900 transition hover:bg-zinc-300"
-              >
-                <Download className="size-4" />
-                Download ZIP
-              </a>
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <StatsCard
+                  label="Arquivos"
+                  value={
+                    data.totalFiles
+                  }
+                />
 
-              <div className="mt-6 space-y-2">
-                {data.files.map((file) => (
-                  <button
-                    key={file.id}
-                    type="button"
-                    onClick={() =>
-                      handleFileClick(
-                        file.downloadUrl
-                      )
-                    }
-                    className="flex w-full items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-left text-sm transition hover:border-zinc-600"
-                  >
-                    <FileText className="size-4" />
+                <StatsCard
+                  label="Markdowns"
+                  value={
+                    data.files.length
+                  }
+                />
+              </div>
 
-                    <span className="truncate">
-                      {file.name}
-                    </span>
-                  </button>
-                ))}
+              <div className="mt-6">
+                <ProjectSidebar
+                  files={data.files}
+                  onSelect={
+                    handleFileClick
+                  }
+                  downloadUrl={
+                    data.downloadUrl
+                  }
+                />
               </div>
             </>
           )}
         </div>
 
-        <div className="min-h-[80vh] flex-1 overflow-auto rounded-3xl border border-zinc-800 bg-zinc-900/70 p-6">
+        <div className="min-h-[80vh] flex-1 overflow-auto rounded-3xl border border-zinc-800 bg-zinc-900/70 p-8">
           {selectedFile ? (
-            <pre className="whitespace-pre-wrap text-sm text-zinc-300">
-              {selectedFile}
-            </pre>
+            <MarkdownViewer
+              content={selectedFile}
+            />
           ) : (
             <div className="flex h-full items-center justify-center text-zinc-500">
               Nenhum arquivo selecionado

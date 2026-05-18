@@ -78,7 +78,7 @@ export async function POST(req: Request) {
       success: true,
       projectId,
       projectName,
-
+      totalFiles: files.length,
       downloadUrl: `/api/download/${projectId}`,
 
       files: generatedFiles.map((file) => ({
