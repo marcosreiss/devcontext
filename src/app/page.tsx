@@ -2,6 +2,8 @@
 "use client";
 
 import {
+  Check,
+  Copy,
   Loader2,
   UploadCloud,
 } from "lucide-react";
@@ -46,6 +48,9 @@ export default function HomePage() {
 
   const [selectedFile, setSelectedFile] =
     useState("");
+
+  const [copied, setCopied] =
+    useState(false);
 
   const inputRef =
     useRef<HTMLInputElement>(null);
@@ -92,6 +97,20 @@ export default function HomePage() {
       await response.text();
 
     setSelectedFile(content);
+  }
+
+  async function handleCopy() {
+    if (!selectedFile) return;
+
+    await navigator.clipboard.writeText(
+      selectedFile
+    );
+
+    setCopied(true);
+
+    setTimeout(() => {
+      setCopied(false);
+    }, 2000);
   }
 
   return (
@@ -203,11 +222,45 @@ export default function HomePage() {
           )}
         </div>
 
-        <div className="min-h-[80vh] flex-1 overflow-auto rounded-3xl border border-zinc-800 bg-zinc-900/70 p-8">
+        <div className="min-h-[80vh] flex-1 overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900/70">
           {selectedFile ? (
-            <MarkdownViewer
-              content={selectedFile}
-            />
+            <>
+              <div className="flex items-center justify-between border-b border-zinc-800 px-6 py-4">
+                <div>
+                  <h2 className="text-sm font-medium text-zinc-200">
+                    Markdown Preview
+                  </h2>
+
+                  <p className="text-xs text-zinc-500">
+                    Visualização do contexto gerado
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleCopy}
+                  className="flex items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm transition hover:border-zinc-500"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="size-4 text-green-400" />
+                      Copiado
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="size-4" />
+                      Copiar markdown
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="h-[calc(100vh-120px)] overflow-auto p-8">
+                <MarkdownViewer
+                  content={selectedFile}
+                />
+              </div>
+            </>
           ) : (
             <div className="flex h-full items-center justify-center text-zinc-500">
               Nenhum arquivo selecionado
