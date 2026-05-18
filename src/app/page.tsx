@@ -2,11 +2,25 @@
 "use client";
 
 import {
+  Download,
+  FileText,
   Loader2,
   UploadCloud,
 } from "lucide-react";
 
 import { useRef, useState } from "react";
+
+interface GeneratedFile {
+  id: string;
+  name: string;
+  downloadUrl: string;
+}
+
+interface UploadResponse {
+  projectName: string;
+  downloadUrl: string;
+  files: GeneratedFile[];
+}
 
 export default function HomePage() {
   const [loading, setLoading] =
@@ -14,6 +28,14 @@ export default function HomePage() {
 
   const [dragging, setDragging] =
     useState(false);
+
+  const [data, setData] =
+    useState<UploadResponse | null>(
+      null
+    );
+
+  const [selectedFile, setSelectedFile] =
+    useState<string | null>(null);
 
   const inputRef =
     useRef<HTMLInputElement>(null);
@@ -34,122 +56,159 @@ export default function HomePage() {
         }
       );
 
-      const blob =
-        await response.blob();
+      const result =
+        await response.json();
 
-      const url =
-        window.URL.createObjectURL(blob);
+      setData(result);
 
-      const a =
-        document.createElement("a");
+      if (result.files.length > 0) {
+        const firstFile =
+          await fetch(
+            result.files[0].downloadUrl
+          );
 
-      a.href = url;
+        const content =
+          await firstFile.text();
 
-      a.download =
-        file.name.replace(
-          ".zip",
-          ""
-        ) + "-context.zip";
-
-      a.click();
-
-      window.URL.revokeObjectURL(url);
+        setSelectedFile(content);
+      }
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleChange(
-    event: React.ChangeEvent<HTMLInputElement>
+  async function handleFileClick(
+    url: string
   ) {
-    const file =
-      event.target.files?.[0];
+    const response = await fetch(url);
 
-    if (!file) return;
+    const content =
+      await response.text();
 
-    await processFile(file);
-  }
-
-  async function handleDrop(
-    event: React.DragEvent<HTMLDivElement>
-  ) {
-    event.preventDefault();
-
-    setDragging(false);
-
-    const file =
-      event.dataTransfer.files?.[0];
-
-    if (!file) return;
-
-    await processFile(file);
+    setSelectedFile(content);
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-zinc-950 px-6 text-zinc-100">
-      <div className="w-full max-w-md rounded-3xl border border-zinc-800 bg-zinc-900/70 p-8 shadow-2xl backdrop-blur">
-        <div className="mb-8 text-center">
-          <div className="mb-4 flex justify-center">
-            <div className="rounded-2xl bg-zinc-800 p-4">
-              <UploadCloud className="size-8 text-zinc-100" />
+    <main className="min-h-screen bg-zinc-950 text-zinc-100">
+      <div className="mx-auto flex max-w-7xl gap-6 p-6">
+        <div className="w-[320px] shrink-0 rounded-3xl border border-zinc-800 bg-zinc-900/70 p-6">
+          <div className="mb-6">
+            <h1 className="text-2xl font-semibold">
+              DevContext
+            </h1>
+
+            <p className="mt-2 text-sm text-zinc-400">
+              Gere contexto automático
+              para IA.
+            </p>
+          </div>
+
+          {/** biome-ignore lint/a11y/noStaticElementInteractions: verificar e corrigir */}
+          {/** biome-ignore lint/a11y/useKeyWithClickEvents: verificar e corrigir */}
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+
+              setDragging(true);
+            }}
+            onDragLeave={() =>
+              setDragging(false)
+            }
+            onDrop={async (event) => {
+              event.preventDefault();
+
+              setDragging(false);
+
+              const file =
+                event.dataTransfer
+                  .files?.[0];
+
+              if (!file) return;
+
+              await processFile(file);
+            }}
+            onClick={() =>
+              inputRef.current?.click()
+            }
+            className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-10 transition ${dragging
+              ? "border-zinc-300 bg-zinc-800"
+              : "border-zinc-700 bg-zinc-800/40"
+              }`}
+          >
+            <input
+              ref={inputRef}
+              type="file"
+              accept=".zip"
+              className="hidden"
+              onChange={async (e) => {
+                const file =
+                  e.target.files?.[0];
+
+                if (!file) return;
+
+                await processFile(file);
+              }}
+            />
+
+            <UploadCloud className="mb-4 size-10 text-zinc-400" />
+
+            <span className="text-sm font-medium">
+              Upload .zip
+            </span>
+          </div>
+
+          {loading && (
+            <div className="mt-6 flex items-center gap-2 text-sm">
+              <Loader2 className="size-4 animate-spin" />
+              Processando...
             </div>
-          </div>
+          )}
 
-          <h1 className="text-2xl font-semibold">
-            DevContext
-          </h1>
+          {data && (
+            <>
+              <a
+                href={data.downloadUrl}
+                className="mt-6 flex items-center justify-center gap-2 rounded-xl bg-zinc-100 px-4 py-3 text-sm font-medium text-zinc-900 transition hover:bg-zinc-300"
+              >
+                <Download className="size-4" />
+                Download ZIP
+              </a>
 
-          <p className="mt-2 text-sm text-zinc-400">
-            Gere documentação de
-            contexto automaticamente.
-          </p>
+              <div className="mt-6 space-y-2">
+                {data.files.map((file) => (
+                  <button
+                    key={file.id}
+                    type="button"
+                    onClick={() =>
+                      handleFileClick(
+                        file.downloadUrl
+                      )
+                    }
+                    className="flex w-full items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-left text-sm transition hover:border-zinc-600"
+                  >
+                    <FileText className="size-4" />
+
+                    <span className="truncate">
+                      {file.name}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
-        {/** biome-ignore lint/a11y/noStaticElementInteractions: melhorar explicação */}
-        {/** biome-ignore lint/a11y/useKeyWithClickEvents:melhorar explicação */}
-        <div
-          onDragOver={(e) => {
-            e.preventDefault();
-
-            setDragging(true);
-          }}
-          onDragLeave={() =>
-            setDragging(false)
-          }
-          onDrop={handleDrop}
-          onClick={() =>
-            inputRef.current?.click()
-          }
-          className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-10 transition ${dragging
-            ? "border-zinc-300 bg-zinc-800"
-            : "border-zinc-700 bg-zinc-800/40 hover:border-zinc-500"
-            }`}
-        >
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".zip"
-            className="hidden"
-            onChange={handleChange}
-          />
-
-          <UploadCloud className="mb-4 size-10 text-zinc-400" />
-
-          <span className="text-sm font-medium">
-            Arraste um .zip ou clique
-          </span>
-
-          <span className="mt-1 text-xs text-zinc-500">
-            Apenas arquivos .zip
-          </span>
+        <div className="min-h-[80vh] flex-1 overflow-auto rounded-3xl border border-zinc-800 bg-zinc-900/70 p-6">
+          {selectedFile ? (
+            <pre className="whitespace-pre-wrap text-sm text-zinc-300">
+              {selectedFile}
+            </pre>
+          ) : (
+            <div className="flex h-full items-center justify-center text-zinc-500">
+              Nenhum arquivo selecionado
+            </div>
+          )}
         </div>
-
-        {loading && (
-          <div className="mt-6 flex items-center justify-center gap-2 text-sm text-zinc-300">
-            <Loader2 className="size-4 animate-spin" />
-            Gerando documentação...
-          </div>
-        )}
       </div>
     </main>
   );

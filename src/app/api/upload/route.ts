@@ -1,14 +1,15 @@
 // src/app/api/upload/route.ts
+import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
-
-import { removeTempDir } from "@/core/cleanup/remove-temp-dir";
 
 import { writeStructureMarkdown } from "@/core/markdown/write-structure-markdown";
 
 import { generateFolderMarkdowns } from "@/core/markdown/generate-folder-markdowns";
 
 import { createOutputDir } from "@/core/output/create-output-dir";
+
+import { readOutputFiles } from "@/core/output/read-output-files";
 
 import { zipOutput } from "@/core/output/zip-output";
 
@@ -18,11 +19,11 @@ import { extractZip } from "@/core/scanner/extract-zip";
 
 import { getProjectFiles } from "@/core/scanner/get-project-files";
 
+import { saveProject } from "@/core/storage/memory-store";
+
 import { generateTree } from "@/core/tree/generate-tree";
 
 export async function POST(req: Request) {
-  let tempDir = "";
-
   try {
     const formData = await req.formData();
 
@@ -32,7 +33,7 @@ export async function POST(req: Request) {
       return Response.json({ error: "Arquivo inválido" }, { status: 400 });
     }
 
-    tempDir = await createTempDir();
+    const tempDir = await createTempDir();
 
     const zipPath = path.join(tempDir, file.name);
 
@@ -62,22 +63,34 @@ export async function POST(req: Request) {
 
     await zipOutput(outputDir, finalZip);
 
-    const zipBuffer = await fs.readFile(finalZip);
+    const generatedFiles = await readOutputFiles(outputDir);
 
-    return new Response(zipBuffer, {
-      headers: {
-        "Content-Type": "application/zip",
+    const projectId = crypto.randomUUID();
 
-        "Content-Disposition": `attachment; filename="${projectName}-context.zip"`,
-      },
+    saveProject({
+      id: projectId,
+      projectName,
+      zipPath: finalZip,
+      files: generatedFiles,
+    });
+
+    return Response.json({
+      success: true,
+      projectId,
+      projectName,
+
+      downloadUrl: `/api/download/${projectId}`,
+
+      files: generatedFiles.map((file) => ({
+        id: file.id,
+        name: file.name,
+
+        downloadUrl: `/api/download-file/${projectId}?fileId=${file.id}`,
+      })),
     });
   } catch (error) {
     console.error(error);
 
     return Response.json({ error: "Erro interno" }, { status: 500 });
-  } finally {
-    if (tempDir) {
-      await removeTempDir(tempDir);
-    }
   }
 }
